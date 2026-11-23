@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>虚无缥缈 · Ethereal Mist</title>
+<style>
+  :root {
+    --ink: #e9e4f5;
+    --dim: #a79fbd;
+    --accent: #c9b8ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #0a0812; }
+  body {
+    font-family: "Songti SC", "STSong", "Noto Serif SC", "SimSun", serif;
+    color: var(--ink);
+    cursor: default;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- 背景层 ---- */
+  .bg {
+    position: fixed; inset: -6%;
+    background-image: url("assets/mist-bg.png");
+    background-size: cover;
+    background-position: center;
+    animation: drift 60s ease-in-out infinite alternate;
+    filter: saturate(1.05) brightness(0.92);
+    transform-origin: center;
+    will-change: transform;
+  }
+  @keyframes drift {
+    from { transform: scale(1.02) translate(-1.5%, -1.2%); }
+    to   { transform: scale(1.1)  translate(1.5%, 1.2%); }
+  }
+
+  .veil {
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(120% 90% at 50% 108%, rgba(4,2,10,0.88) 0%, rgba(4,2,10,0.35) 42%, transparent 68%),
+      radial-gradient(90% 65% at 50% -20%, rgba(16,10,34,0.55) 0%, transparent 60%),
+      linear-gradient(180deg, rgba(8,5,18,0.35) 0%, transparent 30%, transparent 70%, rgba(6,4,14,0.72) 100%);
+    pointer-events: none;
+  }
+
+  canvas#mist { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  /* ---- 内容层 ---- */
+  .stage {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 0 24px;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .kicker {
+    font-size: clamp(11px, 1.4vw, 14px);
+    letter-spacing: 0.85em;
+    text-indent: 0.85em;
+    color: var(--dim);
+    text-transform: uppercase;
+    opacity: 0;
+    animation: rise 2.2s cubic-bezier(.2,.7,.2,1) 0.5s forwards;
+  }
+  h1 {
+    margin-top: 22px;
+    font-size: clamp(64px, 13vw, 172px);
+    font-weight: 400;
+    letter-spacing: 0.32em;
+    text-indent: 0.32em;
+    line-height: 1.05;
+    background: linear-gradient(180deg, #fdfbff 8%, #d9c8ff 46%, #8f7ab8 78%, #5b4a7d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 4px 34px rgba(170,140,255,0.38));
+    opacity: 0;
+    animation: rise 2.4s cubic-bezier(.2,.7,.2,1) 0.9s forwards;
+    user-select: none;
+  }
+  .sub {
+    margin-top: 30px;
+    font-size: clamp(13px, 1.7vw, 18px);
+    letter-spacing: 0.42em;
+    text-indent: 0.42em;
+    color: var(--dim);
+    line-height: 2.2;
+    opacity: 0;
+    animation: rise 2.2s cubic-bezier(.2,.7,.2,1) 1.5s forwards;
+  }
+  .rule {
+    margin-top: 38px;
+    width: min(320px, 56vw);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    animation: fade 2.4s ease 2.1s forwards;
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(34px); filter: blur(10px); }
+    to   { opacity: 1; transform: translateY(0);  filter: blur(0); }
+  }
+  @keyframes fade { from { opacity: 0; } to { opacity: 0.8; } }
+
+  /* ---- 底部控制 ---- */
+  .hud {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    z-index: 4;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    padding: 22px 20px 26px;
+    background: linear-gradient(180deg, transparent, rgba(5,3,12,0.78));
+    opacity: 0;
+    animation: fade 2.4s ease 2.4s forwards;
+  }
+  .hint {
+    font-size: 11px; letter-spacing: 0.32em; text-indent: 0.32em;
+    color: rgba(200,188,230,0.5);
+    font-family: ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  .controls { display: flex; gap: 14px; align-items: center; }
+  button {
+    pointer-events: auto;
+    appearance: none; border: 1px solid rgba(201,184,255,0.32);
+    background: rgba(20,12,38,0.45);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px; letter-spacing: 0.24em; text-indent: 0.24em;
+    padding: 12px 26px;
+    border-radius: 999px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform .35s cubic-bezier(.2,.9,.2,1), background .35s, border-color .35s, box-shadow .35s;
+  }
+  button:hover {
+    transform: translateY(-2px);
+    background: rgba(56,36,92,0.55);
+    border-color: rgba(201,184,255,0.7);
+    box-shadow: 0 8px 30px rgba(140,100,230,0.35);
+  }
+  button:active { transform: translateY(0) scale(0.97); }
+  button.primary {
+    background: linear-gradient(180deg, rgba(178,148,255,0.32), rgba(110,74,190,0.32));
+    border-color: rgba(216,199,255,0.65);
+  }
+  .meta {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 10px; letter-spacing: 0.22em; text-indent: 0.22em;
+    color: rgba(190,178,222,0.38);
+  }
+
+  /* ---- 顶角签名 ---- */
+  .sig {
+    position: fixed; top: 26px; left: 30px;
+    z-index: 4;
+    font-family: ui-sans-serif, system-ui, "PingFang SC", sans-serif;
+    font-size: 10px; letter-spacing: 0.4em; text-indent: 0.4em;
+    color: rgba(214,205,238,0.5);
+    opacity: 0; animation: fade 2.6s ease 2.8s forwards;
+  }
+  .count {
+    position: fixed; top: 26px; right: 30px;
+    z-index: 4;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; letter-spacing: 0.18em;
+    color: rgba(214,205,238,0.45);
+    opacity: 0; animation: fade 2.6s ease 2.9s forwards;
+  }
+
+  @media (max-width: 640px) {
+    .sig, .count { display: none; }
+    h1 { letter-spacing: 0.22em; text-indent: 0.22em; }
+  }
+</style>
+</head>
+<body>
+  <div class="bg" id="bg"></div>
+  <canvas id="mist"></canvas>
+  <div class="veil"></div>
+
+  <div class="sig">虚 無</div>
+  <div class="count" id="count">靈 0</div>
+
+  <main class="stage">
+    <div class="kicker">E T H E R E A L&nbsp;&nbsp;M I S T</div>
+    <h1>虚无缥缈</h1>
+    <div class="sub">云烟无定 &nbsp;·&nbsp; 有无相生<br/>在雾中，寻找不存在的人</div>
+    <div class="rule"></div>
+  </main>
+
+  <footer class="hud">
+    <div class="hint">移动鼠标越过雾气 —— 雾会向远处退去</div>
+    <div class="controls">
+      <button class="primary" id="btnPulse">灵 释</button>
+      <button id="btnDensity">雾 稠</button>
+      <button id="btnStill">静 寂</button>
+    </div>
+    <div class="meta">CANVAS · MIST FIELD · 2026</div>
+  </footer>
+
+<script>
+(() => {
+  const canvas = document.getElementById('mist');
+  const ctx = canvas.getContext('2d');
+  const bg = document.getElementById('bg');
+  const countEl = document.getElementById('count');
+
+  let W = 0, H = 0, DPR = 1;
+  const mouse = { x: innerWidth * 0.5, y: innerHeight * 0.6, active: false };
+  let pointer = { x: mouse.x, y: mouse.y }; // 平滑后
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  /* ---------- 粒子 ---------- */
+  const MAX_SPECK = 90;
+  const specks = [];
+  for (let i = 0; i < MAX_SPECK; i++) {
+    specks.push(newSpeck(true));
+  }
+  function newSpeck(anywhere) {
+    return {
+      x: Math.random() * W,
+      y: anywhere ? Math.random() * H : H + 20 + Math.random() * 60,
+      r: 0.7 + Math.random() * 2.1,
+      vy: -(0.12 + Math.random() * 0.5),
+      vx: (Math.random() - 0.5) * 0.22,
+      life: Math.random() * Math.PI * 2,
+      speed: 0.015 + Math.random() * 0.03,
+      alpha: 0.25 + Math.random() * 0.55,
+      hue: Math.random() < 0.78 ? 268 : 200 // 紫 / 青
+    };
+  }
+
+  /* ---------- 雾团 ---------- */
+  const puffs = [];
+  function makePuff(i) {
+    return {
+      x: Math.random() * W,
+      y: H * 0.18 + Math.random() * H * 0.72,
+      r: 90 + Math.random() * 210,
+      vx: (Math.random() - 0.5) * 0.32 - 0.05,
+      vy: (Math.random() - 0.5) * 0.12,
+      a: 0.10 + Math.random() * 0.16,
+      hue: 262 + Math.random() * 28,
+      drift: Math.random() * Math.PI * 2
+    };
+  }
+  function loadPuffs() {
+    puffs.length = 0;
+    const n = density === 'thick' ? 26 : density === 'light' ? 10 : 17;
+    for (let i = 0; i < n; i++) puffs.push(makePuff(i));
+  }
+  let density = 'normal'; // light | normal | thick
+  loadPuffs();
+
+  /* ---------- 交互 ---------- */
+  addEventListener('pointermove', (e) => {
+    mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true;
+  });
+  addEventListener('pointerdown', (e) => {
+    burst(e.clientX ?? mouse.x, e.clientY ?? mouse.y, 26);
+  });
+  addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); burst(mouse.x, mouse.y, 30); }
+  });
+
+  const bursts = [];
+  function burst(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = 0.6 + Math.random() * 2.4;
+      bursts.push({
+        x, y,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.6,
+        life: 1, decay: 0.012 + Math.random() * 0.02,
+        r: 1 + Math.random() * 2.4,
+        hue: Math.random() < 0.72 ? 268 : 190
+      });
+    }
+    spawnSpirits(Math.round(n / 3));
+  }
+
+  let spiritCount = 0;
+  const spirits = [];
+  function spawnSpirits(n) {
+    for (let i = 0; i < n; i++) {
+      spirits.push({
+        x: mouse.x + (Math.random() - 0.5) * 160,
+        y: mouse.y + (Math.random() - 0.5) * 90,
+        vy: -(0.5 + Math.random() * 1.1),
+        vx: (Math.random() - 0.5) * 0.6,
+        life: 1, decay: 0.004 + Math.random() * 0.006,
+        r: 2.5 + Math.random() * 4.5,
+        wobble: Math.random() * Math.PI * 2
+      });
+      spiritCount++;
+    }
+    countEl.textContent = '靈 ' + spiritCount;
+  }
+
+  /* ---------- 按钮 ---------- */
+  document.getElementById('btnPulse').addEventListener('click', () => {
+    burst(mouse.x, mouse.y, 60);
+    spawnSpirits(10);
+  });
+  const btnDensity = document.getElementById('btnDensity');
+  btnDensity.addEventListener('click', () => {
+    density = density === 'normal' ? 'thick' : density === 'thick' ? 'light' : 'normal';
+    btnDensity.textContent = density === 'thick' ? '雾 疏' : density === 'light' ? '雾 稠' : '雾 稠';
+    loadPuffs();
+  });
+  let still = false;
+  const btnStill = document.getElementById('btnStill');
+  btnStill.addEventListener('click', () => {
+    still = !still;
+    btnStill.textContent = still ? '动 起' : '静 寂';
+    btnStill.classList.toggle('primary', still);
+  });
+
+  /* ---------- 动画 ---------- */
+  let frame = 0;
+  function loop() {
+    frame++;
+    // 平滑鼠标
+    pointer.x += (mouse.x - pointer.x) * 0.06;
+    pointer.y += (mouse.y - pointer.y) * 0.06;
+
+    // 背景视差
+    const px = (pointer.x / W - 0.5);
+    const py = (pointer.y / H - 0.5);
+    bg.style.transform = `translate(${px * -22}px, ${py * -14}px) scale(1.06)`;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const speed = still ? 0.18 : 1;
+
+    // 雾团
+    for (const p of puffs) {
+      p.drift += 0.004 * speed;
+      p.x += p.vx * speed + Math.cos(p.drift) * 0.12 * speed;
+      p.y += p.vy * speed + Math.sin(p.drift * 0.7) * 0.08 * speed;
+      if (p.x < -p.r * 1.6) p.x = W + p.r * 1.4;
+      if (p.x > W + p.r * 1.6) p.x = -p.r * 1.4;
+      if (p.y < -p.r * 1.6) p.y = H + p.r;
+      if (p.y > H + p.r * 1.6) p.y = -p.r;
+
+      // 鼠标排斥
+      const dx = p.x - pointer.x, dy = p.y - pointer.y;
+      const d = Math.hypot(dx, dy);
+      const R = 260 + p.r * 0.35;
+      let push = 0;
+      if (d < R && mouse.active) { push = (1 - d / R) * 3.2; p.x += (dx / (d || 1)) * push * speed; p.y += (dy / (d || 1)) * push * speed * 0.7; }
+
+      const breathe = 0.75 + 0.25 * Math.sin(p.drift * 1.8);
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      const a = p.a * breathe * (still ? 1.25 : 1);
+      grad.addColorStop(0, `hsla(${p.hue}, 62%, 76%, ${a})`);
+      grad.addColorStop(0.45, `hsla(${p.hue}, 55%, 62%, ${a * 0.55})`);
+      grad.addColorStop(1, `hsla(${p.hue}, 60%, 55%, 0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 发光粒子（灵尘）
+    for (const s of specks) {
+      s.life += s.speed * speed;
+      s.x += s.vx * speed + Math.sin(s.life) * 0.18;
+      s.y += s.vy * speed;
+      // 轻微被鼠标吹开
+      if (mouse.active) {
+        const dx = s.x - pointer.x, dy = s.y - pointer.y;
+        const d = Math.hypot(dx, dy);
+        if (d < 130 && d > 0.01) { s.x += dx / d * 0.9; s.y += dy / d * 0.9; }
+      }
+      if (s.y < -30 || s.x < -40 || s.x > W + 40) { Object.assign(s, newSpeck(false)); }
+      const tw = 0.5 + 0.5 * Math.sin(s.life * 2.4);
+      const alpha = s.alpha * tw;
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${s.hue}, 90%, 82%, ${alpha})`;
+      ctx.shadowColor = `hsla(${s.hue}, 95%, 75%, ${alpha})`;
+      ctx.shadowBlur = 8;
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // 爆发粒子
+    for (let i = bursts.length - 1; i >= 0; i--) {
+      const b = bursts[i];
+      b.x += b.vx * speed; b.y += b.vy * speed;
+      b.vy += 0.02 * speed; b.vx *= 0.985;
+      b.life -= b.decay;
+      if (b.life <= 0) { bursts.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${b.hue}, 92%, 80%, ${b.life * 0.85})`;
+      ctx.shadowColor = `hsla(${b.hue}, 96%, 72%, ${b.life})`;
+      ctx.shadowBlur = 10;
+      ctx.arc(b.x, b.y, b.r * b.life + 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // 灵体
+    for (let i = spirits.length - 1; i >= 0; i--) {
+      const sp = spirits[i];
+      sp.wobble += 0.06 * speed;
+      sp.x += sp.vx * speed + Math.sin(sp.wobble) * 0.5;
+      sp.y += sp.vy * speed;
+      sp.life -= sp.decay * speed;
+      if (sp.life <= 0 || sp.y < -60) { spirits.splice(i, 1); continue; }
+      const glow = ctx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, sp.r * 3.4);
+      glow.addColorStop(0, `rgba(238, 228, 255, ${0.85 * sp.life})`);
+      glow.addColorStop(0.35, `rgba(196, 164, 255, ${0.45 * sp.life})`);
+      glow.addColorStop(1, 'rgba(160, 120, 240, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, sp.r * 3.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  // 初始轻微绽放
+  setTimeout(() => burst(W * 0.5, H * 0.55, 34), 1400);
+})();
+</script>
+</body>
+</html>
